@@ -1,0 +1,18 @@
+{
+    "header": {
+        "timestamp": 1,
+        "source": "planning",
+        "target": ["knowledge"],
+        "content": ["knowledge_query"],
+        "id": 4
+    },
+    "knowledge_query": {
+        "timestamp": 1,
+        "type": "social_context",
+        "data": [
+            {
+                "target":""
+            }
+        ]
+    }
+}

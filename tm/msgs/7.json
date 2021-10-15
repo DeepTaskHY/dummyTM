@@ -1,0 +1,16 @@
+{
+  "header": {
+    "source": "planning",
+    "target": ["dialog"],
+    "content": "dialog_generation",
+    "id": 7,
+    "timestamp": 1
+  },
+  "dialog_generation": {
+    "intent": "ask_disease",
+    "human_speech": "",
+    "social_context": {
+      "name":""
+    }
+  }
+}
