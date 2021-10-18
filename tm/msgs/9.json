@@ -9,7 +9,7 @@
   "dialog_generation": {
     "intent": "end_medicine",
     "human_speech": "",
-    "medical_status": {
+    "social_context": {
       "name":""
     }
   }

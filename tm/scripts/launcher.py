@@ -4,7 +4,7 @@ import rospy
 from std_msgs.msg import String
 import rospkg
 
-import json, time, threading
+import json, time, threading, re
 
 # PACKAGE_PATH = rospkg.RosPack().get_path('tm')
 PACKAGE_PATH = '..'
@@ -32,49 +32,53 @@ def callback_com(arg):
 
         if msg_id == 1:
             # 물어본 이름이 맞으면
-            if info['positive'] == 'true':
-                _scene = 2
+            
+            if info.get('positive'):
+                if info['positive'] != "":
+                    _scene = 2
 
             # 물어본 이름이 아니면
-            if info['negative'] == 'true':
-                _scene = 3
-                _social_context = dict()
+            if info.get('negative'):
+                if info['negative'] != '':
+                    _scene = 3
+                    _social_context = dict()
 
         if msg_id == 2:
-            if info['medicine'] == 'true':
-                response = json.load(open(PACKAGE_PATH + '/msgs/9-k.json'))
-                response['knowledge_query']['data']['target'] = _social_context['name']
-                publisher.publish('/taskExecution', json.dump(response, ensure_ascii=False))
-                return
+            if info.get('medicine'):
 
-            if info['negative'] == 'true':
-                _scene = 6
-            if info['health_check'] == 'true':
-                _scene = 10
+                if info['medicine'] != '':
+                    response = json.load(open(PACKAGE_PATH + '/msgs/9-k.json'))
+                    response['knowledge_query']['data']['target'] = _social_context['name']
+                    publisher.publish('/taskExecution', json.dump(response, ensure_ascii=False))
+                    return
+
+            if info.get('negative'):
+                if info['negative'] != '':
+                    _scene = 6
+
+            if info.get('health_check'):
+                if info['health_check'] != '':
+                    _scene = 10
 
         # '성함알려주세요'에 대한 대답으로 이름을 줌
-
         if msg_id == 3:
-            if info['name']:
+            if info.get('name'):
                 _scene = 4
 
         # '(신원정보)를 알려주시겠어요?'에 대한 대답
         if msg_id == 5:
+            
+            if info.get('name'):
+                if info['name'] != '':
+                    _social_context['name'] = info['name']
 
-            try:
-                _social_context['name'] = info['name']
-            except IndexError:
-                pass
-
-            try:
-                _social_context['gender'] = info['gender']
-            except IndexError:
-                pass
-
-            try:
-                _social_context['age'] = info['age']
-            except IndexError:
-                pass
+            if info.get('gender'):
+                if info['gender'] != '':
+                    _social_context['gender'] = info['gender']
+            
+            if info.get('age'):
+                if info['age'] != '':
+                    _social_context['age'] = info['age']
 
             if len(list(_social_context.keys())) == 3:
                 _scene = 7
@@ -82,65 +86,84 @@ def callback_com(arg):
                 pass
 
         if msg_id == 7:
-            if info['negative'] == 'true':
-                _scene = 6
-            if info['positive'] == 'true':
-                _scene = 8
+            if info.get('negative'):
+                if info['negative'] != '':
+                    _scene = 6
+
+            if info.get('positive'):
+                if info['positive'] != '':
+                    _scene = 8
 
         if msg_id == 8:
-            if info['disease']:
-                _scene = 10
-                _social_context['disease'] = info['disease']
+            if info.get('disease'):
+                if info['disease'] != '':
+                    _scene = 10
+                    _social_context['disease'] = info['disease']
 
         if msg_id == 10:
-            if info['disease_status']:
-                _scene = 11
-                _social_context['disease_status'] = info['disease_status']
+            if info.get('disease_status'):
+                if info['disease_status'] != '':
+                    _scene = 11
+                    _social_context['disease_status'] = info['disease_status']
 
         if msg_id == 11:
-            if info['sleep_time']:
-                _scene = 12
-                if info['sleep_time'] >= 7:
-                    _social_context['sleep_status'] = "positive"
-                else:
-                    _social_context['sleep_status'] = "negative"
-                response_k = json.load(open(PACKAGE_PATH + '/msgs/knowledge_request.json'.format(_scene)))
-                response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
-                response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'sleepStatus'
-                response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['sleep_status']
-                publisher.publish('/taskExecution', json.dump(response_k, ensure_ascii=False))
+            if info.get('sleep_time'):
+                
+                if info['sleep_time'] != '':
+                    _scene = 12
+                    sleep_time = float(re.findall('\d+', info['sleep_time'])[0])
+
+                    if sleep_time >= 7:
+                        _social_context['sleep_status'] = "positive"
+                    else:
+                        _social_context['sleep_status'] = "negative"
+
+                    response_k = json.load(open(PACKAGE_PATH + '/msgs/knowledge_request.json'.format(_scene)))
+                    response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                    response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'sleepStatus'
+                    response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['sleep_status']
+                    publisher.publish('/taskExecution', json.dump(response_k, ensure_ascii=False))
 
         if msg_id == 12:
-            if info['positive'] == 'true':
-                _scene = 13
-            if info['negative'] == 'true':
-                _scene = 14
+            if info.get('positive'):
+                if info['positive'] != '':
+                    _scene = 13
+            if info.get('negative'):
+                if info['negative'] != '':
+                    _scene = 14
 
         if msg_id == 13:
-            if info['average_drink']:
-                _scene = 14
-                _social_context['average_drink'] = info['average_drink']
-                response_k = json.load(open(PACKAGE_PATH + '/msgs/knowledge_request.json'.format(_scene)))
-                response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
-                response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'averageDrink'
-                response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['average_drink']
-                publisher.publish('/taskExecution', json.dump(response_k, ensure_ascii=False))
+            if info.get('average_drink'):
+                if info['average_drink'] != '':
+                    average_drink = float(re.findall('\d+', info['average_drink']))
+                    _scene = 14
+                    _social_context['average_drink'] = average_drink
+                    response_k = json.load(open(PACKAGE_PATH + '/msgs/knowledge_request.json'.format(_scene)))
+                    response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                    response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'averageDrink'
+                    response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['average_drink']
+                    publisher.publish('/taskExecution', json.dump(response_k, ensure_ascii=False))
 
         if msg_id == 14:
-            if info['positive'] == 'true':
-                _scene = 15
-            if info['negative'] == 'true':
-                _scene = 16
+            if info.get('positive'):
+                if info['positive'] != '':
+                    _scene = 15
+            if info.get('negative'):
+                if info['negative'] != '':
+                    _scene = 16                    
 
         if msg_id == 15:
-            if info['average_smoke']:
-                _scene = 16
-                _social_context['average_smoke'] = info['average_smoke']
-                response_k = json.load(open(PACKAGE_PATH + '/msgs/knowledge_request.json'.format(_scene)))
-                response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
-                response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'averageSmoke'
-                response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['average_smoke']
-                publisher.publish('/taskExecution', json.dump(response_k, ensure_ascii=False))
+            if info.get('average_smoke'):
+                if info['average_smoke'] != '':
+                    average_smoke = float(re.findall('\d+', info['average_smoke']))
+            
+                    _scene = 16
+                    _social_context['average_smoke'] = average_smoke
+                    response_k = json.load(open(PACKAGE_PATH + '/msgs/knowledge_request.json'.format(_scene)))
+                    response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                    response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'averageSmoke'
+                    response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['average_smoke']
+                    publisher.publish('/taskExecution', json.dump(response_k, ensure_ascii=False))
 
         response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
         response['dialog_generation']['social_context'] = _social_context

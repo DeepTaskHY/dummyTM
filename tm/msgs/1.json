@@ -7,7 +7,7 @@
     "timestamp": 1
   },
   "dialog_generation": {
-    "intent": "check_user_id",
+    "intent": "check_user_info",
     "human_speech": "",
     "social_context": {
       "name": "이병현",
