@@ -6,7 +6,7 @@ import rospkg
 
 import json, time, threading
 
-PACKAGE_PATH = rospkg.RosPack().get_path('tm')
+# PACKAGE_PATH = rospkg.RosPack().get_path('tm')
 PACKAGE_PATH = '..'
 
 def kb_interface():
@@ -16,8 +16,8 @@ def kb_interface():
 
         msg = json.load(open(PACKAGE_PATH+'/msgs/{}.json'.format(input_msg)))
 
-        rospy.loginfo(json.dump(msg, ensure_ascii=False))
-        publisher.publish('/taskExecution', json.dump(msg, ensure_ascii=False))
+        rospy.loginfo(json.dumps(msg, ensure_ascii=False))
+        publisher.publish(json.dumps(msg, ensure_ascii=False))
 
 
 if __name__ == '__main__':
