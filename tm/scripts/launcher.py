@@ -9,10 +9,10 @@ import json, time, threading, re
 # PACKAGE_PATH = rospkg.RosPack().get_path('tm')
 PACKAGE_PATH = '..'
 
-_scene = 0
+_scene = 1
 _social_context = dict()
 _medical_status = dict()
-
+_start = False
 
 def callback_com(arg):
     global _scene, _social_context, _medical_status
@@ -27,7 +27,7 @@ def callback_com(arg):
         print(msg['dialog_generation']['dialog'])
 
     if msg_from == "dialog_intent":
-        content = msg['human_speech']
+        content = msg['dialog_intent']
         info = content['information']
 
         if msg_id == 1:
@@ -238,13 +238,15 @@ def kb_interface():
 
 
 def callback_exe(arg):
-    global _scene, _social_context
+    global _scene, _social_context, _start
     msg = json.loads(arg.data)
     header = msg['header']
 
     _scene = header['id']
+    
     if _scene == 1:
-        _social_context = msg['dialog_generation']['social_context']
+        if msg.get('dialog_generation'):
+            _social_context = msg['dialog_generation']['social_context']
 
     return
 
