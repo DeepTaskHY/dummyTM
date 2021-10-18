@@ -9,34 +9,7 @@
   "dialog_generation": {
     "intent": "check_user_info",
     "human_speech": "",
-    "social_context": {
-      "name": "이병현",
-      "age": "노인",
-      "gender": "남성",
-      "appellation": "어르신",
-      "help_avail": true,
-      "visitFreq": 2,
-      "sleep_status": "positive",
-      "meal_menu": "설렁탕",
-      "disease_name": "고혈압",
-      "medical_checkup": {
-          "systolic_blood_pressure": {
-              "state": "decreasing",
-              "range": "normal"
-          },
-          "diastolic_blood_pressure": {
-              "state": "decreasing",
-              "range": "normal"
-          },
-          "blood_sugar_level": {
-              "state": "decreasing",
-              "range": "normal"
-          },
-          "cholesterol_level": {
-              "state": "decreasing",
-              "range": "normal"
-          }
-      }
-    }
+    "social_context": ""
   }
 }
+

@@ -11,11 +11,10 @@ PACKAGE_PATH = '..'
 
 _scene = 1
 _social_context = dict()
-_medical_status = dict()
-_start = False
+_speech_content = ""
 
 def callback_com(arg):
-    global _scene, _social_context, _medical_status
+    global _scene, _social_context, _speech_content
     publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
 
     msg = json.loads(arg.data)
@@ -28,6 +27,7 @@ def callback_com(arg):
 
     if msg_from == "dialog_intent":
         content = msg['dialog_intent']
+        _speech_content = content['speech']
         info = content['information']
 
         if msg_id == 1:
@@ -48,7 +48,7 @@ def callback_com(arg):
 
                 if info['medicine'] != '':
                     response = json.load(open(PACKAGE_PATH + '/msgs/9-k.json'))
-                    response['knowledge_query']['data']['target'] = _social_context['name']
+                    response['knowledge_query']['data'][0]['target'] = _social_context['name']
                     rospy.loginfo(json.dumps(response, ensure_ascii=False))
                     publisher.publish(json.dumps(response, ensure_ascii=False))
                     return
@@ -57,14 +57,20 @@ def callback_com(arg):
                 if info['negative'] != '':
                     _scene = 6
 
-            if info.get('health_check'):
-                if info['health_check'] != '':
+            if info.get('health'):
+                if info.get('check') and info['check'] != '':
                     _scene = 10
 
         # '성함알려주세요'에 대한 대답으로 이름을 줌
         if msg_id == 3:
-            if info.get('name'):
+            if info.get('person'):
+                _social_context['name'] = info['person']['name']
                 _scene = 4
+                response_k = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
+                response_k['knowledge_query']['data'][0]['target'] = _social_context['name']
+                rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
+                publisher.publish(json.dumps(response_k, ensure_ascii=False))
+                return
 
         # '(신원정보)를 알려주시겠어요?'에 대한 대답
         if msg_id == 5:
@@ -171,7 +177,7 @@ def callback_com(arg):
 
         response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
         response['dialog_generation']['social_context'] = _social_context
-        response['dialog_generation']['human_speech'] = content['speech']
+        response['dialog_generation']['human_speech'] = _speech_content
         rospy.loginfo(json.dumps(response, ensure_ascii=False))
         publisher.publish(json.dumps(response, ensure_ascii=False))
 
@@ -179,21 +185,29 @@ def callback_com(arg):
         # KM에 신원정보 존재하는지 확인
         if msg_id == 4:
             # 존재하면
-            try:
+            if msg['knowledge_query']['data'][0].get('social_context')
                 _social_context = msg['knowledge_query']['data'][0]['social_context']
                 _scene = 1
             # 없으면
-            except IndexError:
-                _social_context['name'] = msg['knowledge_query']['data'][0]['target']
+            else:
                 _scene = 5
         if msg_id == 9:
+
             _scene = 9
-            _medical_status = msg['knowledge_query']['data'][0]['medical_status']
+            _social_context = msg['knowledge_query']['data'][0]['social_context']
+
+            # response_k = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
+            # response_k['knowledge_query']['data'][0]['s'] = _social_context['name']
+            # response_k['knowledge_query']['data'][0]['p'] = 'averageDrink'
+            # response_k['knowledge_query']['data'][0]['o'] = _social_context['average_drink']
+            # rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
+            # publisher.publish(json.dumps(response_k, ensure_ascii=False))
+            # return
+
 
         response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
         response['dialog_generation']['social_context'] = _social_context
-        response['dialog_generation']['medical_status'] = _medical_status
-        response['dialog_generation']['human_speech'] = content['speech']
+        response['dialog_generation']['human_speech'] = _speech_content
         rospy.loginfo(json.dumps(response, ensure_ascii=False))
         publisher.publish(json.dumps(response, ensure_ascii=False))
 
@@ -244,7 +258,7 @@ def kb_interface():
 
 
 def callback_exe(arg):
-    global _scene, _social_context, _start
+    global _scene, _social_context
     msg = json.loads(arg.data)
     header = msg['header']
 
@@ -253,6 +267,7 @@ def callback_exe(arg):
     if _scene == 1:
         if msg.get('dialog_generation'):
             _social_context = msg['dialog_generation']['social_context']
+            # print(_social_context)
 
     return
 

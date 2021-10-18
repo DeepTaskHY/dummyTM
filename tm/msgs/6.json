@@ -7,7 +7,7 @@
     "timestamp": 1
   },
   "dialog_generation": {
-    "intent": "end_fine",
+    "intent": "saying_good_bye",
     "human_speech": "",
     "social_context": {
       "name":""
