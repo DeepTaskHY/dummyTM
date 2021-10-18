@@ -1,7 +1,7 @@
 {
   "header": {
     "source": "planning",
-    "target": ["dialog", "dialog_intent"],
+    "target": ["dialog"],
     "content": "dialog_generation",
     "id": 9,
     "timestamp": 1

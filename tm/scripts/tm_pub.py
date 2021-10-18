@@ -13,7 +13,8 @@ def kb_interface():
     publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
     while True:
         input_msg = input("scene#:")
-
+        if input_msg == 'q':
+            break
         msg = json.load(open(PACKAGE_PATH+'/msgs/{}-k.json'.format(input_msg)))
 
         rospy.loginfo(json.dumps(msg, ensure_ascii=False))

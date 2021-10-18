@@ -9,7 +9,7 @@
   "dialog_generation": {
     "intent": "check_information_user",
     "human_speech": "",
-    "social_context": ""
+    "social_context": {}
   }
 }
 
