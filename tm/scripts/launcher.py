@@ -119,7 +119,7 @@ def callback_com(arg):
 
             if info.get('health'):
                 if info.get('check') and info['check'] != '':
-                    _scene = 10
+                    _scene = 5
 
         # '성함알려주세요'에 대한 대답으로 이름을 줌
         if msg_id == 3:
@@ -211,6 +211,7 @@ def callback_com(arg):
                     response_k['knowledge_request']['data'][0]['predicate'].append(pred)
                     # rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
                     publisher.publish(json.dumps(response_k, ensure_ascii=False))
+            _scene = 11
 
         if msg_id == 11:
             if info.get('smoke_average'):
@@ -226,7 +227,7 @@ def callback_com(arg):
                     response_k['knowledge_request']['data'][0]['predicate'].append(pred)
                     # rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
                     publisher.publish(json.dumps(response_k, ensure_ascii=False))
-
+            _scene = 12
         if msg_id == 13:
             pass
 
