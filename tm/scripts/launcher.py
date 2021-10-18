@@ -6,14 +6,16 @@ import rospkg
 
 import json, time, threading
 
-PACKAGE_PATH = rospkg.RosPack().get_path('tm')
+# PACKAGE_PATH = rospkg.RosPack().get_path('tm')
+PACKAGE_PATH = '..'
 
 _scene = 0
 _social_context = dict()
+_medical_status = dict()
 
 
 def callback_com(arg):
-    global _scene, _social_context
+    global _scene, _social_context, _medical_status
     publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
 
     msg = json.loads(arg.data)
@@ -40,7 +42,10 @@ def callback_com(arg):
 
         if msg_id == 2:
             if info['medicine'] == 'true':
-                _scene = 9
+                response = json.load(open(PACKAGE_PATH + '/msgs/9-k.json'))
+                response['knowledge_query']['data']['target'] = _social_context['name']
+                publisher.publish('/taskExecution', json.dump(response, ensure_ascii=False))
+                return
 
             if info['negative'] == 'true':
                 _scene = 6
@@ -48,8 +53,10 @@ def callback_com(arg):
                 _scene = 10
 
         # '성함알려주세요'에 대한 대답으로 이름을 줌
+
         if msg_id == 3:
-            _scene = 4
+            if info['name']:
+                _scene = 4
 
         # '(신원정보)를 알려주시겠어요?'에 대한 대답
         if msg_id == 5:
@@ -91,9 +98,17 @@ def callback_com(arg):
                 _social_context['disease_status'] = info['disease_status']
 
         if msg_id == 11:
-            if info['sleep_status']:
+            if info['sleep_time']:
                 _scene = 12
-                _social_context['sleep_status'] = info['sleep_status']
+                if info['sleep_time'] >= 7:
+                    _social_context['sleep_status'] = "positive"
+                else:
+                    _social_context['sleep_status'] = "negative"
+                response_k = json.load(open(PACKAGE_PATH + '/msgs/knowledge_request.json'.format(_scene)))
+                response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'sleepStatus'
+                response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['sleep_status']
+                publisher.publish('/taskExecution', json.dump(response_k, ensure_ascii=False))
 
         if msg_id == 12:
             if info['positive'] == 'true':
@@ -105,6 +120,11 @@ def callback_com(arg):
             if info['average_drink']:
                 _scene = 14
                 _social_context['average_drink'] = info['average_drink']
+                response_k = json.load(open(PACKAGE_PATH + '/msgs/knowledge_request.json'.format(_scene)))
+                response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'averageDrink'
+                response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['average_drink']
+                publisher.publish('/taskExecution', json.dump(response_k, ensure_ascii=False))
 
         if msg_id == 14:
             if info['positive'] == 'true':
@@ -116,6 +136,11 @@ def callback_com(arg):
             if info['average_smoke']:
                 _scene = 16
                 _social_context['average_smoke'] = info['average_smoke']
+                response_k = json.load(open(PACKAGE_PATH + '/msgs/knowledge_request.json'.format(_scene)))
+                response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'averageSmoke'
+                response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['average_smoke']
+                publisher.publish('/taskExecution', json.dump(response_k, ensure_ascii=False))
 
         response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
         response['dialog_generation']['social_context'] = _social_context
@@ -129,19 +154,19 @@ def callback_com(arg):
             try:
                 _social_context = msg['knowledge_query']['data'][0]['social_context']
                 _scene = 1
-                response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
-                response['dialog_generation']['social_context'] = _social_context
-                response['dialog_generation']['human_speech'] = content['speech']
-                publisher.publish('/taskExecution', json.dump(response, ensure_ascii=False))
-
             # 없으면
             except IndexError:
                 _social_context['name'] = msg['knowledge_query']['data'][0]['target']
                 _scene = 5
-                response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
-                response['dialog_generation']['social_context'] = _social_context
-                response['dialog_generation']['human_speech'] = content['speech']
-                publisher.publish('/taskExecution', json.dump(response, ensure_ascii=False))
+        if msg_id == 9:
+            _scene = 9
+            _medical_status = msg['knowledge_query']['data'][0]['medical_status']
+
+        response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
+        response['dialog_generation']['social_context'] = _social_context
+        response['dialog_generation']['medical_status'] = _medical_status
+        response['dialog_generation']['human_speech'] = content['speech']
+        publisher.publish('/taskExecution', json.dump(response, ensure_ascii=False))
 
     return
 
@@ -199,7 +224,6 @@ def callback_exe(arg):
         _social_context = msg['dialog_generation']['social_context']
 
     return
-
 
 
 if __name__ == '__main__':

@@ -1,0 +1,24 @@
+{
+    "header": {
+        "timestamp": 1,
+        "source": "planning",
+        "target": ["knowledge"],
+        "content": ["knowledge_request"],
+        "id": 0
+    },
+    "knowledge_request": {
+        "timestamp": 1,
+        "type": "update",
+        "data": [
+            {
+                "subject": "",
+                "predicate": [
+                    {
+                        "p": "",
+                        "o": ""
+                    }
+                ]
+            }
+        ]
+    }
+}
