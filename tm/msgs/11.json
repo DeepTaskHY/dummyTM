@@ -7,7 +7,7 @@
     "timestamp": 1
   },
   "dialog_generation": {
-    "intent": "check_sleep_state",
+    "intent": "check_information_smoke",
     "human_speech": "",
     "social_context": {
       "name":""

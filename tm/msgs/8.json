@@ -7,7 +7,7 @@
     "timestamp": 1
   },
   "dialog_generation": {
-    "intent": "register_user_disease",
+    "intent": "check_information_sleep_2",
     "human_speech": "",
     "social_context": {
       "name":""

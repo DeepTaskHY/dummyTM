@@ -7,7 +7,7 @@
     "timestamp": 1
   },
   "dialog_generation": {
-    "intent": "check_drink_state",
+    "intent": "",
     "human_speech": "",
     "social_context": {
       "name":""

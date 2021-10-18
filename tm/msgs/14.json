@@ -7,7 +7,7 @@
     "timestamp": 1
   },
   "dialog_generation": {
-    "intent": "check_is_smoke",
+    "intent": "",
     "human_speech": "",
     "social_context": {
       "name":""

@@ -12,12 +12,7 @@
         "data": [
             {
                 "subject": "",
-                "predicate": [
-                    {
-                        "p": "",
-                        "o": ""
-                    }
-                ]
+                "predicate": []
             }
         ]
     }

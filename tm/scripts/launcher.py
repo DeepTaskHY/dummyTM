@@ -9,7 +9,7 @@ import json, time, threading, re
 # PACKAGE_PATH = rospkg.RosPack().get_path('tm')
 PACKAGE_PATH = '..'
 
-_scene = 1
+_scene = 0
 _social_context = dict()
 _speech_content = ""
 
@@ -32,25 +32,72 @@ def callback_com(arg):
 
         if msg_id == 1:
             # 물어본 이름이 맞으면
-            
             if info.get('positive'):
                 if info['positive'] != "":
                     _scene = 2
 
-            # 물어본 이름이 아니면
-            if info.get('negative'):
+            # 물어본 이름이 틀리면
+            elif info.get('negative'):
                 if info['negative'] != '':
                     _scene = 3
                     _social_context = dict()
+
+            # 처음부터 인식이 안되었을 경우 이름과 나이, 성별을 바로 질문함
+            elif info.get('person'):
+                if info['person'].get('name'):
+                    name = info['person']['name']
+                else:
+                    name = _social_context['name'] 
+                
+                age = info['person']['age']
+                if int(age) <= 20:
+                    ageGroup = "청소년"
+                    appellation = '님'
+                elif int(age) <= 80:
+                    ageGroup = "성인"
+                    appellation = '님'
+                else:
+                    ageGroup = "노인"
+                    appellation = '어르신'
+                
+                gender = info['person']['gender']
+                if gender in ['남자', '남성', '남']:
+                    gender = '남성'
+                else:
+                    gender = '여성'
+
+                request_km = json.load(open(PACKAGE_PATH + '/msgs/create.json'))
+                request_km['knowledge_request']['data'][0]['subject'] = "Person"
+                request_km['knowledge_request']['data'][0]['predicate'].append({"p":"fullName", "o":name})
+                request_km['knowledge_request']['data'][0]['predicate'].append({"p":"isAged", "o":ageGroup})
+                request_km['knowledge_request']['data'][0]['predicate'].append({"p":"gender", "o":gender})
+                request_km['knowledge_request']['data'][0]['predicate'].append({"p":"hasAppellation", "o":appellation})
+                request_km['knowledge_request']['data'][0]['predicate'].append({"p":"visitFreq", "o":1})
+                request_km['knowledge_request']['data'][0]['predicate'].append({"p":"sleepStatus", "o":""})
+                request_km['knowledge_request']['data'][0]['predicate'].append({"p":"drinkStatus", "o":""})
+                request_km['knowledge_request']['data'][0]['predicate'].append({"p":"smokeStatus", "o":""})
+                rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
+                publisher.publish(json.dumps(request_km, ensure_ascii=False))
+                
+                _social_context['name'] = name
+                _social_context['age'] = ageGroup
+                _social_context['gender'] = gender
+                _social_context['appellation'] = appellation
+                _social_context['visitFreq'] = 1
+                _social_context['sleep_status'] = ""
+                _social_context['smoke_status'] = ""
+                _social_context['drink_status'] = ""
+                
+                _scene = 5
 
         if msg_id == 2:
             if info.get('medicine'):
 
                 if info['medicine'] != '':
-                    response = json.load(open(PACKAGE_PATH + '/msgs/9-k.json'))
-                    response['knowledge_query']['data'][0]['target'] = _social_context['name']
-                    rospy.loginfo(json.dumps(response, ensure_ascii=False))
-                    publisher.publish(json.dumps(response, ensure_ascii=False))
+                    query_km = json.load(open(PACKAGE_PATH + '/msgs/9-k.json'))
+                    query_km['knowledge_query']['data'][0]['target'] = _social_context['name']
+                    rospy.loginfo(json.dumps(query_km, ensure_ascii=False))
+                    publisher.publish(json.dumps(query_km, ensure_ascii=False))
                     return
 
             if info.get('negative'):
@@ -66,114 +113,97 @@ def callback_com(arg):
             if info.get('person'):
                 _social_context['name'] = info['person']['name']
                 _scene = 4
-                response_k = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
-                response_k['knowledge_query']['data'][0]['target'] = _social_context['name']
-                rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
-                publisher.publish(json.dumps(response_k, ensure_ascii=False))
+                query_km = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
+                query_km['knowledge_query']['data'][0]['target'] = _social_context['name']
+                rospy.loginfo(json.dumps(query_km, ensure_ascii=False))
+                publisher.publish(json.dumps(query_km, ensure_ascii=False))
                 return
 
-        # '(신원정보)를 알려주시겠어요?'에 대한 대답
+        # '아픈 곳이 있으신가요?' / '기존 질병의 상태는 어떠신가요?' 에 대한 대답
         if msg_id == 5:
-            
-            if info.get('name'):
-                if info['name'] != '':
-                    _social_context['name'] = info['name']
-
-            if info.get('gender'):
-                if info['gender'] != '':
-                    _social_context['gender'] = info['gender']
-            
-            if info.get('age'):
-                if info['age'] != '':
-                    _social_context['age'] = info['age']
-
-            if len(list(_social_context.keys())) == 3:
-                _scene = 7
+            if _social_context.get('disease_name'):
+                if info.get('negative'):
+                    if info['negative'] != '':
+                        _social_context['disease_status'] = 'negative'
+                if info.get('positive'):
+                    if info['positive'] != '':
+                        _social_context['disease_status'] = 'positive'
+                if info.get('neutral'):
+                    if info['neutral'] != '':
+                        _social_context['disease_status'] = 'neutral'
+                _scene = 8
             else:
-                pass
+                if info.get('negative'):
+                    if info['negative'] != '':
+                        _scene = 6
+
+                if info.get('positive'):
+                    if info['positive'] != '':
+                        _scene = 7
 
         if msg_id == 7:
-            if info.get('negative'):
-                if info['negative'] != '':
-                    _scene = 6
+            if info.get('disease_name'):
+                if info['disease_name'] != '':
+                    _scene = 5
+                    _social_context['disease_name'] = info['disease_name']
+                    request_km = json.load(open(PACKAGE_PATH + '/msgs/create.json'))
+                    request_km['knowledge_request']['data'][0]['subject'] = "MedicalRecord"
+                    request_km['knowledge_request']['data'][0]['predicate'].append({"p":"relatedDisease", "o":_social_context['disease_name']})
+                    request_km['knowledge_request']['data'][0]['predicate'].append({"p":"targetPerson", "o":_social_context['name']})
+                    rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
+                    publisher.publish(json.dumps(request_km, ensure_ascii=False))
 
-            if info.get('positive'):
-                if info['positive'] != '':
-                    _scene = 8
 
         if msg_id == 8:
-            if info.get('disease'):
-                if info['disease'] != '':
-                    _scene = 10
-                    _social_context['disease'] = info['disease']
-
-        if msg_id == 10:
-            if info.get('disease_status'):
-                if info['disease_status'] != '':
-                    _scene = 11
-                    _social_context['disease_status'] = info['disease_status']
-
-        if msg_id == 11:
             if info.get('sleep_time'):
                 
                 if info['sleep_time'] != '':
-                    _scene = 12
+                    _scene = 10
                     sleep_time = float(re.findall('\d+', info['sleep_time'])[0])
 
-                    if sleep_time >= 7:
+                    if sleep_time >= 8:
                         _social_context['sleep_status'] = "positive"
                     else:
                         _social_context['sleep_status'] = "negative"
 
-                    response_k = json.load(open(PACKAGE_PATH + '/msgs/knowledge_request.json'.format(_scene)))
+                    response_k = json.load(open(PACKAGE_PATH + '/msgs/update.json'.format(_scene)))
                     response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
                     response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'sleepStatus'
                     response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['sleep_status']
                     rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
                     publisher.publish(json.dumps(response_k, ensure_ascii=False))
 
-        if msg_id == 12:
-            if info.get('positive'):
-                if info['positive'] != '':
-                    _scene = 13
-            if info.get('negative'):
-                if info['negative'] != '':
-                    _scene = 14
+        if msg_id == 10:
+            if info.get('drink_average'):
+                if info['drink_average'] != '':
+                    
+                    average_drink = float(re.findall('\d+', info['drink_average']))
+
+                    _scene = 11
+                    
+                    _social_context['drink_status'] = "negative"
+                    response_k = json.load(open(PACKAGE_PATH + '/msgs/update.json'.format(_scene)))
+                    response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                    response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'drinkStatus'
+                    response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['drink_status']
+                    rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
+                    publisher.publish(json.dumps(response_k, ensure_ascii=False))
+
+        if msg_id == 11:
+            if info.get('smoke_average'):
+                if info['smoke_average'] != '':
+                    average_smoke = float(re.findall('\d+', info['smoke_average']))
+                    _scene = 12
+                    _social_context['smoke_status'] = 'negative'
+                    response_k = json.load(open(PACKAGE_PATH + '/msgs/update.json'.format(_scene)))
+                    response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                    response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'smokeStatus'
+                    response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['smoke_status']
+                    rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
+                    publisher.publish(json.dumps(response_k, ensure_ascii=False))
 
         if msg_id == 13:
-            if info.get('average_drink'):
-                if info['average_drink'] != '':
-                    average_drink = float(re.findall('\d+', info['average_drink']))
-                    _scene = 14
-                    _social_context['average_drink'] = average_drink
-                    response_k = json.load(open(PACKAGE_PATH + '/msgs/knowledge_request.json'.format(_scene)))
-                    response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
-                    response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'averageDrink'
-                    response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['average_drink']
-                    rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
-                    publisher.publish(json.dumps(response_k, ensure_ascii=False))
-
-        if msg_id == 14:
-            if info.get('positive'):
-                if info['positive'] != '':
-                    _scene = 15
-            if info.get('negative'):
-                if info['negative'] != '':
-                    _scene = 16                    
-
-        if msg_id == 15:
-            if info.get('average_smoke'):
-                if info['average_smoke'] != '':
-                    average_smoke = float(re.findall('\d+', info['average_smoke']))
-            
-                    _scene = 16
-                    _social_context['average_smoke'] = average_smoke
-                    response_k = json.load(open(PACKAGE_PATH + '/msgs/knowledge_request.json'.format(_scene)))
-                    response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
-                    response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'averageSmoke'
-                    response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['average_smoke']
-                    rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
-                    publisher.publish(json.dumps(response_k, ensure_ascii=False))
+            pass
 
         response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
         response['dialog_generation']['social_context'] = _social_context
@@ -183,32 +213,27 @@ def callback_com(arg):
 
     if msg_from == "knowledge":
         # KM에 신원정보 존재하는지 확인
+        if msg_id == 1:
+            if msg['knowledge_query']['data'][0].get('social_context'):
+                _social_context = msg['knowledge_query']['data'][0]['social_context']
+            _scene = 1
+
         if msg_id == 4:
             # 존재하면
-            if msg['knowledge_query']['data'][0].get('social_context')
+            if msg['knowledge_query']['data'][0].get('social_context'):
                 _social_context = msg['knowledge_query']['data'][0]['social_context']
-                _scene = 1
-            # 없으면
-            else:
-                _scene = 5
+            _scene = 1
+
         if msg_id == 9:
 
             _scene = 9
             _social_context = msg['knowledge_query']['data'][0]['social_context']
 
-            # response_k = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
-            # response_k['knowledge_query']['data'][0]['s'] = _social_context['name']
-            # response_k['knowledge_query']['data'][0]['p'] = 'averageDrink'
-            # response_k['knowledge_query']['data'][0]['o'] = _social_context['average_drink']
-            # rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
-            # publisher.publish(json.dumps(response_k, ensure_ascii=False))
-            # return
-
 
         response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
         response['dialog_generation']['social_context'] = _social_context
         response['dialog_generation']['human_speech'] = _speech_content
-        rospy.loginfo(json.dumps(response, ensure_ascii=False))
+        rospy.loginfo(json.dumps(response, ensure_ascii=False, indent=4))
         publisher.publish(json.dumps(response, ensure_ascii=False))
 
     return
@@ -238,7 +263,7 @@ def kb_interface():
 
     while True:
 
-        input_msg = input("사람:")
+        input_msg = input("사람:\n")
 
         msg = {
               "header": {

@@ -3,15 +3,16 @@
         "timestamp": 1,
         "source": "planning",
         "target": ["knowledge"],
-        "content": ["knowledge_query"],
-        "id": 9
+        "content": ["knowledge_request"],
+        "id": 0
     },
-    "knowledge_query": {
+    "knowledge_request": {
         "timestamp": 1,
-        "type": "social_context",
+        "type": "create",
         "data": [
             {
-                "target": ""
+                "subject": "",
+                "predicate": []
             }
         ]
     }

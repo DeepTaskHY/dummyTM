@@ -7,7 +7,7 @@
     "timestamp": 1
   },
   "dialog_generation": {
-    "intent": "ask_disease",
+    "intent": "check_information_disease_name",
     "human_speech": "",
     "social_context": {
       "name":""
