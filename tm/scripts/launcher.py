@@ -49,7 +49,7 @@ def callback_com(arg):
                 if info['medicine'] != '':
                     response = json.load(open(PACKAGE_PATH + '/msgs/9-k.json'))
                     response['knowledge_query']['data']['target'] = _social_context['name']
-                    publisher.publish('/taskExecution', json.dump(response, ensure_ascii=False))
+                    publisher.publish(json.dumps(response, ensure_ascii=False))
                     return
 
             if info.get('negative'):
@@ -122,7 +122,7 @@ def callback_com(arg):
                     response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
                     response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'sleepStatus'
                     response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['sleep_status']
-                    publisher.publish('/taskExecution', json.dump(response_k, ensure_ascii=False))
+                    publisher.publish(json.dumps(response_k, ensure_ascii=False))
 
         if msg_id == 12:
             if info.get('positive'):
@@ -142,7 +142,7 @@ def callback_com(arg):
                     response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
                     response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'averageDrink'
                     response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['average_drink']
-                    publisher.publish('/taskExecution', json.dump(response_k, ensure_ascii=False))
+                    publisher.publish(json.dumps(response_k, ensure_ascii=False))
 
         if msg_id == 14:
             if info.get('positive'):
@@ -163,12 +163,12 @@ def callback_com(arg):
                     response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
                     response_k['knowledge_request']['data'][0]['predicate'][0]['p'] = 'averageSmoke'
                     response_k['knowledge_request']['data'][0]['predicate'][0]['o'] = _social_context['average_smoke']
-                    publisher.publish('/taskExecution', json.dump(response_k, ensure_ascii=False))
+                    publisher.publish(json.dumps(response_k, ensure_ascii=False))
 
         response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
         response['dialog_generation']['social_context'] = _social_context
         response['dialog_generation']['human_speech'] = content['speech']
-        publisher.publish('/taskExecution', json.dump(response, ensure_ascii=False))
+        publisher.publish(json.dumps(response, ensure_ascii=False))
 
     if msg_from == "knowledge":
         # KM에 신원정보 존재하는지 확인
@@ -189,7 +189,7 @@ def callback_com(arg):
         response['dialog_generation']['social_context'] = _social_context
         response['dialog_generation']['medical_status'] = _medical_status
         response['dialog_generation']['human_speech'] = content['speech']
-        publisher.publish('/taskExecution', json.dump(response, ensure_ascii=False))
+        publisher.publish(json.dumps(response, ensure_ascii=False))
 
     return
 
@@ -233,8 +233,8 @@ def kb_interface():
               }
         }
 
-        rospy.loginfo(json.dump(msg, ensure_ascii=False))
-        publisher.publish('/taskExecution', json.dump(msg, ensure_ascii=False))
+        rospy.loginfo(json.dumps(msg, ensure_ascii=False))
+        publisher.publish(json.dumps(msg, ensure_ascii=False))
 
 
 def callback_exe(arg):

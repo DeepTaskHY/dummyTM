@@ -7,6 +7,7 @@ import rospkg
 import json, time, threading
 
 PACKAGE_PATH = rospkg.RosPack().get_path('tm')
+PACKAGE_PATH = '..'
 
 def kb_interface():
     publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
