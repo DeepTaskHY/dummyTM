@@ -6,8 +6,8 @@ import rospkg
 
 import json, time, threading, re
 
-# PACKAGE_PATH = rospkg.RosPack().get_path('tm')
-PACKAGE_PATH = '..'
+PACKAGE_PATH = rospkg.RosPack().get_path('tm')
+# PACKAGE_PATH = '..'
 
 _scene = 0
 _social_context = dict()
@@ -89,7 +89,7 @@ def callback_com(arg):
                 request_km['knowledge_request']['data'][0]['predicate'].append({"p":"sleepStatus", "o":""})
                 request_km['knowledge_request']['data'][0]['predicate'].append({"p":"drinkStatus", "o":""})
                 request_km['knowledge_request']['data'][0]['predicate'].append({"p":"smokeStatus", "o":""})
-                # rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
+                rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
                 publisher.publish(json.dumps(request_km, ensure_ascii=False))
                 
                 _social_context['name'] = name
@@ -109,7 +109,7 @@ def callback_com(arg):
                 if info['medicine'] != '':
                     query_km = json.load(open(PACKAGE_PATH + '/msgs/9-k.json'))
                     query_km['knowledge_query']['data'][0]['target'] = _social_context['name']
-                    # rospy.loginfo(json.dumps(query_km, ensure_ascii=False))
+                    rospy.loginfo(json.dumps(query_km, ensure_ascii=False))
                     publisher.publish(json.dumps(query_km, ensure_ascii=False))
                     return
 
@@ -118,7 +118,7 @@ def callback_com(arg):
                     _scene = 6
 
             if info.get('health'):
-                if info.get('check') and info['check'] != '':
+                if info.get('health') != '':
                     _scene = 5
 
         # '성함알려주세요'에 대한 대답으로 이름을 줌
@@ -128,28 +128,29 @@ def callback_com(arg):
                 _scene = 4
                 query_km = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
                 query_km['knowledge_query']['data'][0]['target'] = _social_context['name']
-                # rospy.loginfo(json.dumps(query_km, ensure_ascii=False))
+                rospy.loginfo(json.dumps(query_km, ensure_ascii=False))
                 publisher.publish(json.dumps(query_km, ensure_ascii=False))
                 return
 
         # '아픈 곳이 있으신가요?' / '기존 질병의 상태는 어떠신가요?' 에 대한 대답
         if msg_id == 5:
-            if _social_context.get('disease_name'):
-                if info.get('negative'):
-                    if info['negative'] != '':
-                        _social_context['disease_status'] = 'negative'
-                elif info.get('positive'):
-                    if info['positive'] != '':
-                        _social_context['disease_status'] = 'positive'
+            if _social_context.get('disease_name') is not None:
+                if info.get('disease_status'):
+                    if info['disease_status'] != '':
+                        _social_context['disease_status'] = info['disease_status']
+                    else:
+                        _social_context['disease_status'] = 'neutral'
                 else:
                     _social_context['disease_status'] = 'neutral'
+                
                 request_km = json.load(open(PACKAGE_PATH + '/msgs/update.json'))
                 request_km['knowledge_request']['data'][0]['subject'] = _social_context['name']
                 request_km['knowledge_request']['data'][0]['predicate'].append({"p":"diseaseStatus", "o":_social_context['disease_status']})
-                # rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
+                rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
                 publisher.publish(json.dumps(request_km, ensure_ascii=False))
-
+                
                 _scene = 8
+
             else:
                 if info.get('negative'):
                     if info['negative'] != '':
@@ -169,13 +170,12 @@ def callback_com(arg):
                     request_km['knowledge_request']['data'][0]['subject'] = "MedicalRecord"
                     request_km['knowledge_request']['data'][0]['predicate'].append({"p":"relatedDisease", "o":_social_context['disease_name']})
                     request_km['knowledge_request']['data'][0]['predicate'].append({"p":"targetPerson", "o":_social_context['name']})
-                    # rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
+                    rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
                     publisher.publish(json.dumps(request_km, ensure_ascii=False))
 
         # 하루 평균 수면 시간이 몇시간입니까 에 대한 대답
         if msg_id == 8:
             if info.get('sleep_average'):
-                
                 if info['sleep_average'] != '':
                     _scene = 10
                     sleep_time = float(re.findall('\d+', info['sleep_average'])[0])
@@ -191,17 +191,13 @@ def callback_com(arg):
                     pred['p'] = 'sleepStatus'
                     pred['o'] = _social_context['sleep_status']
                     response_k['knowledge_request']['data'][0]['predicate'].append(pred)
-                    # rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
+                    rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
                     publisher.publish(json.dumps(response_k, ensure_ascii=False))
 
         if msg_id == 10:
             if info.get('drink_average'):
                 if info['drink_average'] != '':
-                    
-                    average_drink = float(re.findall('\d+', info['drink_average']))
-
                     _scene = 11
-                    
                     _social_context['drink_status'] = "negative"
                     response_k = json.load(open(PACKAGE_PATH + '/msgs/update.json'.format(_scene)))
                     response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
@@ -209,14 +205,24 @@ def callback_com(arg):
                     pred['p'] = 'drinkStatus'
                     pred['o'] = _social_context['drink_status']
                     response_k['knowledge_request']['data'][0]['predicate'].append(pred)
-                    # rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
+                    rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
                     publisher.publish(json.dumps(response_k, ensure_ascii=False))
-            _scene = 11
+            if info.get('negative'):
+                if info['negative'] != '':
+                    _scene = 11
+                    _social_context['drink_status'] = "positive"
+                    response_k = json.load(open(PACKAGE_PATH + '/msgs/update.json'.format(_scene)))
+                    response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                    pred = dict()
+                    pred['p'] = 'drinkStatus'
+                    pred['o'] = _social_context['drink_status']
+                    response_k['knowledge_request']['data'][0]['predicate'].append(pred)
+                    rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
+                    publisher.publish(json.dumps(response_k, ensure_ascii=False))
 
         if msg_id == 11:
             if info.get('smoke_average'):
                 if info['smoke_average'] != '':
-                    average_smoke = float(re.findall('\d+', info['smoke_average']))
                     _scene = 12
                     _social_context['smoke_status'] = 'negative'
                     response_k = json.load(open(PACKAGE_PATH + '/msgs/update.json'.format(_scene)))
@@ -225,20 +231,34 @@ def callback_com(arg):
                     pred['p'] = 'smokeStatus'
                     pred['o'] = _social_context['smoke_status']
                     response_k['knowledge_request']['data'][0]['predicate'].append(pred)
-                    # rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
+                    rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
                     publisher.publish(json.dumps(response_k, ensure_ascii=False))
-            _scene = 12
+            if info.get('negative'):
+                if info['negative'] != '':
+                    _scene = 12
+                    _social_context['smoke_status'] = 'positive'
+                    response_k = json.load(open(PACKAGE_PATH + '/msgs/update.json'.format(_scene)))
+                    response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                    pred = dict()
+                    pred['p'] = 'smokeStatus'
+                    pred['o'] = _social_context['smoke_status']
+                    response_k['knowledge_request']['data'][0]['predicate'].append(pred)
+                    rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
+                    publisher.publish(json.dumps(response_k, ensure_ascii=False))
+
         if msg_id == 13:
             pass
 
         response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
         response['dialog_generation']['social_context'] = _social_context
         response['dialog_generation']['human_speech'] = _speech_content
-        # rospy.loginfo(json.dumps(response, ensure_ascii=False))
+        rospy.loginfo(json.dumps(response, ensure_ascii=False))
         publisher.publish(json.dumps(response, ensure_ascii=False))
 
     if msg_from == "knowledge":
         # KM에 신원정보 존재하는지 확인
+        if msg_id == 0:
+            return
         if msg_id == 1:
             if msg['knowledge_query']['data'][0].get('social_context'):
                 _social_context = msg['knowledge_query']['data'][0]['social_context']
@@ -255,11 +275,13 @@ def callback_com(arg):
             _scene = 9
             _social_context = msg['knowledge_query']['data'][0]['social_context']
 
+        if _scene == 0:
+            return
 
         response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
         response['dialog_generation']['social_context'] = _social_context
         response['dialog_generation']['human_speech'] = _speech_content
-        # rospy.loginfo(json.dumps(response, ensure_ascii=False, indent=4))
+        rospy.loginfo(json.dumps(response, ensure_ascii=False))
         publisher.publish(json.dumps(response, ensure_ascii=False))
 
     return
@@ -298,16 +320,16 @@ def kb_interface():
               "header": {
                 "source": "planning",
                 "target": ["dialog_intent"],
-                "content": "dialog_intent",
+                "content": "human_speech",
                 "id": _scene,
                 "timestamp": time.time()
               },
-              "dialog_intent": {
+              "human_speech": {
                 "speech": input_msg
               }
         }
 
-        # rospy.loginfo(json.dumps(msg, ensure_ascii=False))
+        rospy.loginfo(json.dumps(msg, ensure_ascii=False))
         publisher.publish(json.dumps(msg, ensure_ascii=False))
 
 
