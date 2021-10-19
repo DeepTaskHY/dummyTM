@@ -233,8 +233,7 @@ def callback_com(arg):
                     response_k['knowledge_request']['data'][0]['predicate'].append(pred)
                     rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
                     publisher.publish(json.dumps(response_k, ensure_ascii=False))
-            if info.get('negative'):
-                if info['negative'] != '':
+                else:
                     _scene = 12
                     _social_context['smoke_status'] = 'positive'
                     response_k = json.load(open(PACKAGE_PATH + '/msgs/update.json'.format(_scene)))
@@ -251,7 +250,7 @@ def callback_com(arg):
         
         if _scene == 0:
             return
-            
+
         response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
         response['dialog_generation']['social_context'] = _social_context
         response['dialog_generation']['human_speech'] = _speech_content
