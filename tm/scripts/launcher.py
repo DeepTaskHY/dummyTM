@@ -248,7 +248,10 @@ def callback_com(arg):
 
         if msg_id == 13:
             pass
-
+        
+        if _scene == 0:
+            return
+            
         response = json.load(open(PACKAGE_PATH + '/msgs/{}.json'.format(_scene)))
         response['dialog_generation']['social_context'] = _social_context
         response['dialog_generation']['human_speech'] = _speech_content
