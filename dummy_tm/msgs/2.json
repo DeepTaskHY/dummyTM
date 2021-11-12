@@ -1,0 +1,21 @@
+{
+  "header": {
+    "source": "planning",
+    "target": ["dialog"],
+    "content": "dialog_generation",
+    "id": 2,
+    "timestamp": 1
+  },
+  "dialog_generation": {
+    "intent": "check_information_help",
+    "human_speech": "",
+    "social_context": {
+      "name": "이병현",
+      "age": "노인",
+      "gender": "남성",
+      "appellation": "어르신",
+      "visitFreq": 2,
+      "disease_name": "고혈압"
+    }
+  }
+}

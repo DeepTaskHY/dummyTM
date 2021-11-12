@@ -1,0 +1,13 @@
+{
+  "header": {
+    "source": "planning",
+    "target": ["dialog"],
+    "content": "dialog_generation",
+    "id": 3,
+    "timestamp": 1
+  },
+  "dialog_generation": {
+    "intent": "check_information_user_name",
+    "human_speech": ""
+  }
+}

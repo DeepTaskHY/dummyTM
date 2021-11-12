@@ -1,0 +1,16 @@
+{
+  "header": {
+    "source": "planning",
+    "target": ["dialog"],
+    "content": "dialog_generation",
+    "id": 13,
+    "timestamp": 1
+  },
+  "dialog_generation": {
+    "intent": "",
+    "human_speech": "",
+    "social_context": {
+      "name":""
+    }
+  }
+}
