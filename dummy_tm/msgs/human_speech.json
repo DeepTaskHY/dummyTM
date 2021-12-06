@@ -1,0 +1,14 @@
+{
+  "header": {
+    "source": "planning",
+    "target": [
+      "dialog_intent"
+    ],
+    "content": "human_speech",
+    "id": 1,
+    "timestamp": 1
+  },
+  "human_speech": {
+    "speech": ""
+  }
+}

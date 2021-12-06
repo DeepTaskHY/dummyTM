@@ -9,12 +9,13 @@ import time
 from std_msgs.msg import String
 
 PACKAGE_PATH = rospkg.RosPack().get_path('dummy_pm')
-_msg_id = 0
+_msg_id = 1
 _social_context = dict()
 _human_speech = ''
 _retry = False
 _previous_intent = ''
 _end_msg_id = 6
+_face_id = None
 
 # /taskCompletion 의 target은 항상 planning
 
@@ -35,6 +36,8 @@ def callback_com(arg):
     if msg_from == 'knowledge':
         content_dict = dict()
         # KM에 신원정보 존재하는지 확인
+        if _msg_id == 0:
+            _social_context = msg['knowledge_query']['data'][0]['social_context']
 
         if _msg_id == 1 or _msg_id == 4:
             # 존재하면 소셜컨텍스트 채우기
@@ -103,9 +106,11 @@ def callback_com(arg):
             if info.get('medicine'):
                 next_msg_id = 9
                 query_km = json.load(
-                    open(f'{PACKAGE_PATH}/msgs/{next_msg_id}-k.json'))
+                    open(f'{PACKAGE_PATH}/msgs/query_social_context.json'))
+                query_km['header']['id'] = next_msg_id
                 query_km['knowledge_query']['timestamp'] = time.time()
                 query_km['knowledge_query']['data'][0]['target'] = _social_context['name']
+
                 rospy.loginfo(json.dumps(query_km, ensure_ascii=False))
                 publisher.publish(json.dumps(query_km, ensure_ascii=False))
                 _retry = False
@@ -127,7 +132,8 @@ def callback_com(arg):
                 _social_context['name'] = info['person']['name']
                 next_msg_id = 4
                 query_km = json.load(
-                    open(f'{PACKAGE_PATH}/msgs/{next_msg_id}-k.json'))
+                    open(f'{PACKAGE_PATH}/msgs/query_social_context.json'))
+                query_km['header']['id'] = next_msg_id
                 query_km['knowledge_query']['data'][0]['target'] = _social_context['name']
                 rospy.loginfo(json.dumps(query_km, ensure_ascii=False))
                 publisher.publish(json.dumps(query_km, ensure_ascii=False))
@@ -413,31 +419,31 @@ def generate_message(msg_id: int,
     return msg
 
 
-def kb_interface():
-    global _msg_id
-    publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
+# def kb_interface():
+#     global _msg_id
+#     publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
 
-    while True:
-        input_msg = input('사람:')
+#     while True:
+#         input_msg = input('사람:')
 
-        if input_msg == 'q':
-            break
+#         if input_msg == 'q':
+#             break
 
-        msg = {
-            'header': {
-                'source': 'planning',
-                'target': ['dialog_intent'],
-                'content': 'human_speech',
-                'id': _msg_id,
-                'timestamp': time.time()
-            },
-            'human_speech': {
-                'speech': input_msg
-            }
-        }
+#         msg = {
+#             'header': {
+#                 'source': 'planning',
+#                 'target': ['dialog_intent'],
+#                 'content': 'human_speech',
+#                 'id': _msg_id,
+#                 'timestamp': time.time()
+#             },
+#             'human_speech': {
+#                 'speech': input_msg
+#             }
+#         }
 
-        rospy.loginfo(json.dumps(msg, ensure_ascii=False))
-        publisher.publish(json.dumps(msg, ensure_ascii=False))
+#         rospy.loginfo(json.dumps(msg, ensure_ascii=False))
+#         publisher.publish(json.dumps(msg, ensure_ascii=False))
 
 
 def callback_exe(arg):
@@ -456,46 +462,68 @@ def callback_exe(arg):
     return
 
 
+def callback_vision(arg):
+    global _face_id
+    publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
+
+    msg = json.loads(arg.data)
+    fid = int(msg['face_recognition']['face_id'])
+    if not _face_id:
+        _face_id = fid
+    elif fid != _face_id:
+        _face_id = fid
+    else:
+        pass
+
+    try:
+        t_point = msg['face_recognition']['timestamp']
+        msg = json.load(
+            open(f'{PACKAGE_PATH}/msgs/query_face_recognition.json', 'r'))
+        msg['header']['id'] = _face_id
+        msg['header']['timestamp'] = time.time()
+        msg['knowledge_query']['data'][0]['face_id'] = int(fid)
+        msg['knowledge_query']['data'][0]['timestamp'] = t_point
+        publisher.publish('/taskExecution', json.dumps(msg,
+                                                       ensure_ascii=False))
+        rospy.loginfo(json.dumps(msg, ensure_ascii=False))
+    except ValueError:
+        pass
+
+    return
+
+
+def callback_speech(arg):
+    global _human_speech, _msg_id
+
+    publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
+
+    msg = json.loads(arg.data)
+    _human_speech = msg['human_speech']['stt']
+
+    msg = json.load(
+        open(f'{PACKAGE_PATH}/msgs/human_speech.json', 'r'))
+    msg['header']['id'] = _msg_id
+    msg['header']['timestamp'] = time.time()
+    msg['human_speech']['speech'] = _human_speech
+
+    publisher.publish('/taskExecution', json.dumps(msg, ensure_ascii=False))
+    rospy.loginfo(json.dumps(msg, ensure_ascii=False))
+
+    return
+
+
 if __name__ == '__main__':
     rospy.init_node('dummyTM_node')
     rospy.loginfo('Start dummy TM')
 
     rospy.Subscriber('/taskCompletion', String, callback_com)
     rospy.Subscriber('/taskExecution', String, callback_exe)
+    rospy.Subscriber('/recognition/face_id', String, callback_vision)
+    rospy.Subscriber('/recognition/speech', String, callback_speech)
+
     pub = rospy.Publisher('/taskExecution', String, queue_size=10)
 
-    print('* 로봇의 비전 인식을 통해 사용자를 이미 인지한 상황 가정')
-    print()
-    print('[1] : 인식한 사용자를 이미 알고 있는 경우에 대한 시나리오')
-    print('[2] : 인식된 사용자가 처음 방문한 사람인 경우에 대한 시나리오')
-    scene = input('시작하려는 시나리오 번호 입력 : ')
-
-    # msg = json.load(open(f'{PACKAGE_PATH}/msgs/{input_msg}-k.json'))
-
-    user = "Person00{}".format(scene)
-    msg = {
-        "header": {
-            "source": "planning",
-            "target": ["knowledge"],
-            "content": "knowledge_query",
-            "id": 1,
-            "timestamp": time.time()
-        },
-        "knowledge_query": {
-            "timestamp": time.time(),
-            "type": "social_context",
-            "data": [
-                {
-                    "target": user
-                }
-            ]
-        }
-    }
-
-    pub.publish(json.dumps(msg, ensure_ascii=False))
-    rospy.loginfo(json.dumps(msg, ensure_ascii=False))
-
-    t = threading.Thread(target=kb_interface)
-    t.start()
+    # t = threading.Thread(target=kb_interface)
+    # t.start()
 
     rospy.spin()
