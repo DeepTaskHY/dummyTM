@@ -483,8 +483,7 @@ def callback_vision(arg):
         msg['header']['timestamp'] = time.time()
         msg['knowledge_query']['data'][0]['face_id'] = int(fid)
         msg['knowledge_query']['data'][0]['timestamp'] = t_point
-        publisher.publish('/taskExecution', json.dumps(msg,
-                                                       ensure_ascii=False))
+        publisher.publish(json.dumps(msg, ensure_ascii=False))
         rospy.loginfo(json.dumps(msg, ensure_ascii=False))
     except ValueError:
         pass
@@ -506,7 +505,7 @@ def callback_speech(arg):
     msg['header']['timestamp'] = time.time()
     msg['human_speech']['speech'] = _human_speech
 
-    publisher.publish('/taskExecution', json.dumps(msg, ensure_ascii=False))
+    publisher.publish(json.dumps(msg, ensure_ascii=False))
     rospy.loginfo(json.dumps(msg, ensure_ascii=False))
 
     return
