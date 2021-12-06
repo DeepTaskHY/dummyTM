@@ -376,6 +376,9 @@ def callback_com(arg):
         else:
             return
 
+    if not content_dict:
+        return
+
     content_dict['previous_intent'] = _previous_intent
     _previous_intent = content_dict['intent']
     content_dict['human_speech'] = _human_speech
