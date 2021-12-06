@@ -8,7 +8,7 @@ import threading
 import time
 from std_msgs.msg import String
 
-PACKAGE_PATH = rospkg.RosPack().get_path('dummy_pm')
+PACKAGE_PATH = rospkg.RosPack().get_path('dummy_tm')
 _msg_id = 1
 _social_context = dict()
 _human_speech = ''
