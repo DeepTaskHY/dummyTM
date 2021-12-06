@@ -28,13 +28,15 @@ def callback_com(arg):
     header = msg['header']
     msg_from = header['source']
     _msg_id = header['id']
+    next_msg_id = None
+
+    content_dict = dict()
 
     if msg_from == 'dialog_generation':
         print(msg['dialog_generation']['dialog'])
         return
 
     if msg_from == 'knowledge':
-        content_dict = dict()
         # KM에 신원정보 존재하는지 확인
         if _msg_id == 0:
             _social_context = msg['knowledge_query']['data'][0]['social_context']
@@ -62,7 +64,6 @@ def callback_com(arg):
         content = msg['dialog_intent']
         _human_speech = content['speech']
         info = content['information']
-        content_dict = dict()
 
         if _msg_id == 1:
             # _previous_intent = "check_information_user"
