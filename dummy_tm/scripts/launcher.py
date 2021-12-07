@@ -9,6 +9,7 @@ import time
 from std_msgs.msg import String
 
 PACKAGE_PATH = rospkg.RosPack().get_path('dummy_pm')
+_start = False
 _msg_id = 1
 _social_context = dict()
 _human_speech = ''
@@ -21,16 +22,21 @@ _face_id = None
 
 
 def callback_com(arg):
-    global _msg_id, _social_context, _human_speech, _retry, _previous_intent, _end_msg_id
+    global _start, _msg_id, _social_context, _human_speech, _retry, _previous_intent, _end_msg_id
     publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
 
     msg = json.loads(arg.data)
     header = msg['header']
     msg_from = header['source']
-    _msg_id = header['id']
+    _msg_id = int(header['id'])
 
     if msg_from == 'dialog_generation':
-        print(msg['dialog_generation']['dialog'])
+        # print(msg['dialog_generation']['dialog'])
+        if _msg_id == 6:
+            _start = False
+        else:
+            tts_pub = rospy.Publisher('/action/speech', String, queue_size=10)
+            tts_pub.publish(msg['dialog_generation']['dialog'])
         return
 
     if msg_from == 'knowledge':
@@ -39,7 +45,7 @@ def callback_com(arg):
         if _msg_id == 0:
             _social_context = msg['knowledge_query']['data'][0]['social_context']
 
-        if _msg_id == 1 or _msg_id == 4:
+        elif _msg_id == 1 or _msg_id == 4:
             # 존재하면 소셜컨텍스트 채우기
             if msg['knowledge_query']['data'][0].get('social_context'):
                 _social_context = msg['knowledge_query']['data'][0]['social_context']
@@ -463,8 +469,7 @@ def callback_exe(arg):
 
 
 def callback_vision(arg):
-    global _face_id
-    publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
+    global _face_id, _start
 
     msg = json.loads(arg.data)
     fid = int(msg['face_recognition']['face_id'])
@@ -475,19 +480,23 @@ def callback_vision(arg):
     else:
         pass
 
-    try:
-        t_point = msg['face_recognition']['timestamp']
-        msg = json.load(
-            open(f'{PACKAGE_PATH}/msgs/query_face_recognition.json', 'r'))
-        msg['header']['id'] = _face_id
-        msg['header']['timestamp'] = time.time()
-        msg['knowledge_query']['data'][0]['face_id'] = int(fid)
-        msg['knowledge_query']['data'][0]['timestamp'] = t_point
-        publisher.publish('/taskExecution', json.dumps(msg,
-                                                       ensure_ascii=False))
-        rospy.loginfo(json.dumps(msg, ensure_ascii=False))
-    except ValueError:
-        pass
+    if not _start:
+        publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
+
+        try:
+            t_point = msg['face_recognition']['timestamp']
+            msg = json.load(
+                open(f'{PACKAGE_PATH}/msgs/query_face_recognition.json', 'r'))
+            msg['header']['id'] = 1
+            msg['header']['timestamp'] = time.time()
+            msg['knowledge_query']['data'][0]['face_id'] = int(fid)
+            msg['knowledge_query']['data'][0]['timestamp'] = t_point
+            publisher.publish('/taskExecution', json.dumps(msg,
+                                                           ensure_ascii=False))
+            rospy.loginfo(json.dumps(msg, ensure_ascii=False))
+            _start = True
+        except ValueError:
+            pass
 
     return
 
