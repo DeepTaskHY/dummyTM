@@ -22,7 +22,7 @@ _face_id = None
 
 
 def callback_com(arg):
-    global _start, _msg_id, _social_context, _human_speech, _retry, _previous_intent, _end_msg_id
+    global _start, _msg_id, _social_context, _human_speech, _retry, _previous_intent, _end_msg_id, _face_id
     publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
 
     msg = json.loads(arg.data)
@@ -51,6 +51,7 @@ def callback_com(arg):
             # 존재하면 소셜컨텍스트 채우기
             if msg['knowledge_query']['data'][0].get('social_context'):
                 _social_context = msg['knowledge_query']['data'][0]['social_context']
+                _face_id = int(msg['knowledge_query']['data'][0]['face_id'])
 
             next_msg_id = 1
             content_dict['intent'] = 'check_information_user'
@@ -338,8 +339,11 @@ def callback_com(arg):
                     req_content = dict()
                     req_content['subject'] = 'Person'
                     req_content['predicate'] = list()
+
                     req_content['predicate'].append(
                         {'p': 'fullName', 'o': _social_context['name']})
+                    req_content['predicate'].append(
+                        {'p': 'faceID', 'o': _face_id})
                     req_content['predicate'].append(
                         {'p': 'isAged', 'o': _social_context['age_group']})
                     req_content['predicate'].append(
@@ -467,7 +471,6 @@ def callback_vision(arg):
             msg['header']['id'] = 1
             msg['header']['timestamp'] = time.time()
             msg['knowledge_query']['data'][0]['face_id'] = int(fid)
-            msg['knowledge_query']['data'][0]['timestamp'] = t_point
             msg['knowledge_query']['timestamp'] = time.time()
             publisher.publish('/taskExecution', json.dumps(msg,
                                                            ensure_ascii=False))
