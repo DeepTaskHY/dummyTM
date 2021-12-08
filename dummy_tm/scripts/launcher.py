@@ -8,7 +8,7 @@ import threading
 import time
 from std_msgs.msg import String
 
-PACKAGE_PATH = rospkg.RosPack().get_path('dummy_pm')
+PACKAGE_PATH = rospkg.RosPack().get_path('dummy_tm')
 _start = False
 _msg_id = 1
 _social_context = dict()
@@ -29,6 +29,9 @@ def callback_com(arg):
     header = msg['header']
     msg_from = header['source']
     _msg_id = int(header['id'])
+    next_msg_id = None
+
+    content_dict = dict()
 
     if msg_from == 'dialog_generation':
         # print(msg['dialog_generation']['dialog'])
@@ -40,7 +43,6 @@ def callback_com(arg):
         return
 
     if msg_from == 'knowledge':
-        content_dict = dict()
         # KM에 신원정보 존재하는지 확인
         if _msg_id == 0:
             _social_context = msg['knowledge_query']['data'][0]['social_context']
@@ -68,7 +70,6 @@ def callback_com(arg):
         content = msg['dialog_intent']
         _human_speech = content['speech']
         info = content['information']
-        content_dict = dict()
 
         if _msg_id == 1:
             # _previous_intent = "check_information_user"
@@ -381,6 +382,9 @@ def callback_com(arg):
         else:
             return
 
+    if not content_dict:
+        return
+
     content_dict['previous_intent'] = _previous_intent
     _previous_intent = content_dict['intent']
     content_dict['human_speech'] = _human_speech
@@ -515,7 +519,7 @@ def callback_speech(arg):
     msg['header']['timestamp'] = time.time()
     msg['human_speech']['speech'] = _human_speech
 
-    publisher.publish('/taskExecution', json.dumps(msg, ensure_ascii=False))
+    publisher.publish(json.dumps(msg, ensure_ascii=False))
     rospy.loginfo(json.dumps(msg, ensure_ascii=False))
 
     return
