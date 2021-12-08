@@ -429,33 +429,6 @@ def generate_message(msg_id: int,
     return msg
 
 
-# def kb_interface():
-#     global _msg_id
-#     publisher = rospy.Publisher('/taskExecution', String, queue_size=10)
-
-#     while True:
-#         input_msg = input('사람:')
-
-#         if input_msg == 'q':
-#             break
-
-#         msg = {
-#             'header': {
-#                 'source': 'planning',
-#                 'target': ['dialog_intent'],
-#                 'content': 'human_speech',
-#                 'id': _msg_id,
-#                 'timestamp': time.time()
-#             },
-#             'human_speech': {
-#                 'speech': input_msg
-#             }
-#         }
-
-#         rospy.loginfo(json.dumps(msg, ensure_ascii=False))
-#         publisher.publish(json.dumps(msg, ensure_ascii=False))
-
-
 def callback_exe(arg):
     global _msg_id, _social_context
     msg = json.loads(arg.data)
@@ -495,6 +468,7 @@ def callback_vision(arg):
             msg['header']['timestamp'] = time.time()
             msg['knowledge_query']['data'][0]['face_id'] = int(fid)
             msg['knowledge_query']['data'][0]['timestamp'] = t_point
+            msg['knowledge_query']['timestamp'] = time.time()
             publisher.publish('/taskExecution', json.dumps(msg,
                                                            ensure_ascii=False))
             rospy.loginfo(json.dumps(msg, ensure_ascii=False))
@@ -535,8 +509,5 @@ if __name__ == '__main__':
     rospy.Subscriber('/recognition/speech', String, callback_speech)
 
     pub = rospy.Publisher('/taskExecution', String, queue_size=10)
-
-    # t = threading.Thread(target=kb_interface)
-    # t.start()
 
     rospy.spin()
