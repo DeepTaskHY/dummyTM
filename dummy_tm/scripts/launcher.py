@@ -472,8 +472,7 @@ def callback_vision(arg):
             msg['header']['timestamp'] = time.time()
             msg['knowledge_query']['data'][0]['face_id'] = int(fid)
             msg['knowledge_query']['timestamp'] = time.time()
-            publisher.publish('/taskExecution', json.dumps(msg,
-                                                           ensure_ascii=False))
+            publisher.publish(json.dumps(msg, ensure_ascii=False))
             rospy.loginfo(json.dumps(msg, ensure_ascii=False))
             _start = True
         except ValueError:
