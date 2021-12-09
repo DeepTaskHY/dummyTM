@@ -33,7 +33,7 @@ def callback_com(arg):
 
     content_dict = dict()
 
-    if msg_from == 'dialog_generation':
+    if msg_from == 'dialog':
         # print(msg['dialog_generation']['dialog'])
         tts_pub = rospy.Publisher('/action/speech', String, queue_size=10)
         tts_pub.publish(msg['dialog_generation']['dialog'])
@@ -72,7 +72,7 @@ def callback_com(arg):
         if _msg_id == 1:
             # _previous_intent = "check_information_user"
             # 얼굴 인식(ID)이 된 경우 (= 소셜 컨텍스트(이름, 성별, 나이)가 존재하는 경우)
-            if _social_context:
+            if _social_context and _social_context.get('name'):
                 # "(이름) (호칭) 맞으신가요?"에 대한 대답
                 if info.get('positive'):  # 물어본 이름이 맞으면
                     content_dict['intent'] = "check_information_help"
@@ -100,7 +100,7 @@ def callback_com(arg):
                         _social_context['gender'] = '여성'
                     else:
                         pass
-                    _social_context['age'] = info.get('age')
+                    _social_context['age'] = int(info.get('age'))
                     content_dict['intent'] = "check_information_user_age"
                     next_msg_id = 13
                     _retry = False
