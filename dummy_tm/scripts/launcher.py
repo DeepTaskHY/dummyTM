@@ -35,11 +35,10 @@ def callback_com(arg):
 
     if msg_from == 'dialog_generation':
         # print(msg['dialog_generation']['dialog'])
-        if _msg_id == 6:
+        tts_pub = rospy.Publisher('/action/speech', String, queue_size=10)
+        tts_pub.publish(msg['dialog_generation']['dialog'])
+        if _msg_id == _end_msg_id:
             _start = False
-        else:
-            tts_pub = rospy.Publisher('/action/speech', String, queue_size=10)
-            tts_pub.publish(msg['dialog_generation']['dialog'])
         return
 
     if msg_from == 'knowledge':
@@ -52,13 +51,11 @@ def callback_com(arg):
             if msg['knowledge_query']['data'][0].get('social_context'):
                 _social_context = msg['knowledge_query']['data'][0]['social_context']
                 _face_id = int(msg['knowledge_query']['data'][0]['face_id'])
-
             next_msg_id = 1
             content_dict['intent'] = 'check_information_user'
             _retry = False
 
         elif _msg_id == 9:
-
             _social_context = msg['knowledge_query']['data'][0]['social_context']
             next_msg_id = 9
             content_dict['intent'] = "transmit_information_medicine"
@@ -439,9 +436,7 @@ def callback_exe(arg):
     header = msg['header']
 
     if 'planning' in header['target']:
-
         _msg_id = header['id']
-
         if _msg_id == 1:
             if msg.get('dialog_generation'):
                 _social_context = msg['dialog_generation']['social_context']
