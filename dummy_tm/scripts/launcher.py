@@ -72,7 +72,7 @@ def callback_com(arg):
         if _msg_id == 1:
             # _previous_intent = "check_information_user"
             # 얼굴 인식(ID)이 된 경우 (= 소셜 컨텍스트(이름, 성별, 나이)가 존재하는 경우)
-            if _social_context and _social_context.get('name'):
+            if _social_context and _social_context.get('name') and _social_context.get('appellation'):
                 # "(이름) (호칭) 맞으신가요?"에 대한 대답
                 if info.get('positive'):  # 물어본 이름이 맞으면
                     content_dict['intent'] = "check_information_help"
@@ -87,23 +87,40 @@ def callback_com(arg):
                     next_msg_id, content_dict['intent'] = fallback_repeat()
             else:  # 얼굴 인식이 안되었을 경우 이름과 나이, 성별을 바로 질문함
                 # "처음 뵙겠습니다. 이름과 나이, 성별을 알려주시겠어요?"에 대한 대답
+                _social_context['visitFreq'] = 1
+                _social_context['sleep_status'] = ''
+                _social_context['smoke_status'] = ''
+                _social_context['drink_status'] = ''
+                
                 if info.get('person'):  # 엔티티가 제대로 뽑힌 경우
-                    _social_context['visitFreq'] = 1
-                    _social_context['sleep_status'] = ''
-                    _social_context['smoke_status'] = ''
-                    _social_context['drink_status'] = ''
                     _social_context['name'] = info['person'].get('name')
-                    _social_context['gender'] = info.get('gender')
+                    
+                    if '남' in info.get('gender'):
+                        _social_context['gender'] = '남성'
+                    elif '여' in info.get('gender'):
+                        _social_context['gender'] = '여성'
+                    else:
+                        pass
+
+                    _social_context['age'] = int(info.get('age'))
+                    content_dict['intent'] = "check_information_user_age"
+                    next_msg_id = 13
+                    _retry = False
+
+                elif _social_context.get('name') and info.get('gender') and info.get('age'):
+                    _social_context['gender'] = info['gender']
                     if '남' in _social_context['gender']:
                         _social_context['gender'] = '남성'
                     elif '여' in _social_context['gender']:
                         _social_context['gender'] = '여성'
                     else:
                         pass
+
                     _social_context['age'] = int(info.get('age'))
                     content_dict['intent'] = "check_information_user_age"
                     next_msg_id = 13
                     _retry = False
+
                 else:  # 엔티티가 안 뽑힌 경우
                     next_msg_id, content_dict['intent'] = fallback_repeat()
 
