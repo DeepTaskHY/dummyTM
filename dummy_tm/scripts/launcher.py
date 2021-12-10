@@ -34,10 +34,13 @@ def callback_com(arg):
     content_dict = dict()
 
     if msg_from == 'dialog':
-        # print(msg['dialog_generation']['dialog'])
         tts_pub = rospy.Publisher('/action/speech', String, queue_size=10)
         tts_pub.publish(msg['dialog_generation']['dialog'])
         if _msg_id == _end_msg_id or _msg_id == 12:
+            _human_speech = ''
+            _previous_intent = ''
+            _social_context = dict()
+            _face_id = None
             _start = False
         return
 
@@ -61,7 +64,6 @@ def callback_com(arg):
             next_msg_id = 9
             content_dict['intent'] = "transmit_information_medicine"
             _retry = False
-
         else:
             return
 
@@ -77,6 +79,12 @@ def callback_com(arg):
                 # "(이름) (호칭) 맞으신가요?"에 대한 대답
                 if info.get('positive'):  # 물어본 이름이 맞으면
                     content_dict['intent'] = "check_information_help"
+                    _social_context['visitFreq'] += 1
+                    request_km = json.load(open(f'{PACKAGE_PATH}/msgs/update.json'))
+                    request_km['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                    request_km['knowledge_request']['data'][0]['predicate'].append({'p': 'visitFreq', 'o': _social_context['visitFreq']})
+                    rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
+                    publisher.publish(json.dumps(request_km, ensure_ascii=False))
                     next_msg_id = 2
                     _retry = False
                 elif info.get('negative'):  # 물어본 이름이 틀리면
@@ -167,11 +175,19 @@ def callback_com(arg):
 
         # '아픈 곳이 있으신가요?' / '기존 질병의 상태는 어떠신가요?' 에 대한 대답
         elif _msg_id == 5:
-            if _social_context.get('disease_name'):
-                if info.get('disease_status'):
-                    _social_context['disease_status'] = info['disease_status']
+            if _social_context.get('disease_name'): # '기존 질병의 상태는 어떠신가요?'
+
+                # _social_context['disease_name'] = info['disease_name']
+                content_dict['intent'] = "check_information_sleep_2"
+                next_msg_id = 8
+                if info.get('negative'):    
+                    _social_context['disease_status'] = 'negative'
+                elif info.get('positive'):
+                    _social_context['disease_status'] = 'positive'
                 else:
-                    _social_context['disease_status'] = 'Neutral'
+                    _social_context['disease_status'] = 'neutral'
+                    next_msg_id, content_dict['intent'] = fallback_repeat()
+                
                 request_km = json.load(
                     open(f'{PACKAGE_PATH}/msgs/update.json'))
                 request_km['knowledge_request']['data'][0]['subject'] = _social_context['name']
@@ -179,11 +195,11 @@ def callback_com(arg):
                     {'p': 'diseaseStatus', 'o': _social_context['disease_status']})
                 rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
                 publisher.publish(json.dumps(request_km, ensure_ascii=False))
-                content_dict['intent'] = "check_information_sleep_2"
-                next_msg_id = 8
+                # content_dict['intent'] = "check_information_sleep_2"
+                # next_msg_id = 8
                 _retry = False
 
-            else:
+            else: # '아픈 곳이 있으신가요?'
                 if info.get('negative'):
                     content_dict['intent'] = "saying_good_bye"
                     next_msg_id = _end_msg_id
@@ -493,7 +509,6 @@ def callback_vision(arg):
             _start = True
         except ValueError:
             pass
-
     return
 
 
@@ -518,6 +533,7 @@ def callback_speech(arg):
 
 
 if __name__ == '__main__':
+    
     rospy.init_node('dummyTM_node')
     rospy.loginfo('Start dummy TM')
 
@@ -525,7 +541,7 @@ if __name__ == '__main__':
     rospy.Subscriber('/taskExecution', String, callback_exe)
     rospy.Subscriber('/recognition/face_id', String, callback_vision)
     rospy.Subscriber('/recognition/speech', String, callback_speech)
-
-    pub = rospy.Publisher('/taskExecution', String, queue_size=10)
+    rospy.Publisher('/taskExecution', String, queue_size=10)
+    rospy.Publisher('/action/speech', String, queue_size=10)
 
     rospy.spin()
