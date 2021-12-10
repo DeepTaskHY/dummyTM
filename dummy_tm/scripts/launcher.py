@@ -54,7 +54,7 @@ def callback_com(arg):
             # 존재하면 소셜컨텍스트 채우기
             if msg['knowledge_query']['data'][0].get('social_context'):
                 _social_context = msg['knowledge_query']['data'][0]['social_context']
-                _face_id = int(msg['knowledge_query']['data'][0]['face_id'])
+                _face_id = int(_social_context['face_id'])
             next_msg_id = 1
             content_dict['intent'] = 'check_information_user'
             _retry = False
