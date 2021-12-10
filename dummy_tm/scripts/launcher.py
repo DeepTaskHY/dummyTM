@@ -142,7 +142,7 @@ def callback_com(arg):
                 content_dict['intent'] = "saying_good_bye"
                 next_msg_id = _end_msg_id
 
-            elif info.get('health'):
+            elif info.get('positive') or info.get('help') or info.get('health'):
                 content_dict['intent'] = "check_information_disease"
                 next_msg_id = 5
                 _retry = False
