@@ -413,6 +413,7 @@ def callback_com(arg):
                 if info.get('person'):
                     _social_context['name'] = info['person'].get('name')
                     content_dict['intent'] = 'check_information_user_name'
+                    next_msg_id = _msg_id
                     _retry = False
                 else:
                     next_msg_id, content_dict['intent'] = fallback_repeat()
