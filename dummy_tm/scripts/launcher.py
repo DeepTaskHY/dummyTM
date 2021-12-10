@@ -37,14 +37,15 @@ def callback_com(arg):
         # print(msg['dialog_generation']['dialog'])
         tts_pub = rospy.Publisher('/action/speech', String, queue_size=10)
         tts_pub.publish(msg['dialog_generation']['dialog'])
-        if _msg_id == _end_msg_id:
+        if _msg_id == _end_msg_id or _msg_id == 12:
             _start = False
         return
 
     if msg_from == 'knowledge':
         # KM에 신원정보 존재하는지 확인
         if _msg_id == 0:
-            _social_context = msg['knowledge_query']['data'][0]['social_context']
+            if msg.get('knowledge_query'):
+                _social_context = msg['knowledge_query']['data'][0]['social_context']
 
         elif _msg_id == 1 or _msg_id == 4:
             # 존재하면 소셜컨텍스트 채우기
@@ -170,7 +171,7 @@ def callback_com(arg):
                 if info.get('disease_status'):
                     _social_context['disease_status'] = info['disease_status']
                 else:
-                    _social_context['disease_status'] = 'neutral'
+                    _social_context['disease_status'] = 'Neutral'
                 request_km = json.load(
                     open(f'{PACKAGE_PATH}/msgs/update.json'))
                 request_km['knowledge_request']['data'][0]['subject'] = _social_context['name']
@@ -298,7 +299,7 @@ def callback_com(arg):
         elif _msg_id == 13:
             if _social_context['age']:  # "나이가 (나이)세가 맞으신가요?" 에 대한 대답
                 if info.get('positive'):  # 맞다고 대답한 경우
-                    if _social_context['age'] <= 20:
+                    if _social_context['age'] < 20:
                         _social_context['age_group'] = '청소년'
                         _social_context['appellation'] = '님'
                     elif _social_context['age'] <= 80:
@@ -316,7 +317,7 @@ def callback_com(arg):
                 _retry = False
             else:
                 if info.get('age'):  # "나이를 다시 말씀해주시겠어요?" 에 대한 대답 # 나이를 답한 경우
-                    _social_context['age'] = info['age']
+                    _social_context['age'] = int(info['age'])
                     content_dict['intent'] = "check_information_user_age"
                     next_msg_id = _msg_id
                     _retry = False
@@ -375,6 +376,8 @@ def callback_com(arg):
                     req_content['predicate'].append(
                         {'p': 'smokeStatus', 'o': _social_context['smoke_status']})
                     request_km['knowledge_request']['data'][0] = req_content
+                    request_km['knowledge_request']['timestamp'] = time.time()
+
                     rospy.loginfo(json.dumps(
                         request_km, ensure_ascii=False))
                     publisher.publish(json.dumps(
@@ -382,6 +385,7 @@ def callback_com(arg):
                     content_dict['intent'] = "check_information_disease"
                     next_msg_id = 5
                     _retry = False
+
                 elif info.get('negative'):
                     content_dict['intent'] = "check_information_user_name"
                     _social_context['name'] = None
