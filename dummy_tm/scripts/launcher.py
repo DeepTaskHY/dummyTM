@@ -18,7 +18,37 @@ _previous_intent = ''
 _end_msg_id = 6
 _face_id = None
 
-# /taskCompletion 의 target은 항상 planning
+
+def korean_number(words):
+    mapping_list = {
+        '하나': 1, '한': 1,
+        '둘': 2, '두': 2,
+        '셋': 3, '세': 3,
+        '넷': 4, '네': 4,
+        '다섯': 5,
+        '여섯': 6,
+        '일곱': 7,
+        '여덟': 8,
+        '아홉': 9,
+        '열': 10
+    }
+
+    word = re.findall('(' + mapping_list.keys().join('|') + ')', words)[0]
+    word2idx = mapping_list[word]
+
+    return word2idx
+
+
+def time_diff(start_time, end_time):
+    time_format = '%Y-%m-%dT%H:%M:%S%z'
+    start_time_obj = time.mktime(time.strptime(start_time, time_format))
+    end_time_obj = time.mktime(time.strptime(end_time, time_format))
+
+    return end_time_obj - start_time_obj
+
+
+def time_hour_diff(start_time, end_time):
+    return time_diff(start_time, end_time) / 3600
 
 
 def callback_com(arg):
@@ -180,10 +210,12 @@ def callback_com(arg):
                 # _social_context['disease_name'] = info['disease_name']
                 content_dict['intent'] = "check_information_sleep_2"
                 next_msg_id = 8
-                if info.get('negative'):    
+                if info.get('negative') or info.get('disease_status') == 'negative':    
                     _social_context['disease_status'] = 'negative'
-                elif info.get('positive'):
+                    _retry = False
+                elif info.get('disease_status') == 'positive':
                     _social_context['disease_status'] = 'positive'
+                    _retry = False
                 else:
                     _social_context['disease_status'] = 'neutral'
                     next_msg_id, content_dict['intent'] = fallback_repeat()
@@ -197,8 +229,7 @@ def callback_com(arg):
                 publisher.publish(json.dumps(request_km, ensure_ascii=False))
                 # content_dict['intent'] = "check_information_sleep_2"
                 # next_msg_id = 8
-                _retry = False
-
+                
             else: # '아픈 곳이 있으신가요?'
                 if info.get('negative'):
                     content_dict['intent'] = "saying_good_bye"
@@ -207,6 +238,22 @@ def callback_com(arg):
                 elif info.get('positive'):
                     content_dict['intent'] = "check_information_disease_name"
                     next_msg_id = 7
+                    _retry = False
+                elif info.get('disease_name'):
+                    _social_context['disease_name'] = info['disease_name']
+                    request_km = json.load(
+                        open(f'{PACKAGE_PATH}/msgs/create.json'))
+                    request_km['knowledge_request']['data'][0]['subject'] = 'MedicalRecord'
+                    request_km['knowledge_request']['data'][0]['predicate'].append(
+                        {'p': 'relatedDisease', 'o': _social_context['disease_name']})
+                    request_km['knowledge_request']['data'][0]['predicate'].append(
+                        {'p': 'targetPerson', 'o': _social_context['name']})
+                    rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
+                    publisher.publish(json.dumps(
+                        request_km, ensure_ascii=False))
+
+                    content_dict['intent'] = "check_information_disease"
+                    next_msg_id = 5
                     _retry = False
                 else:
                     next_msg_id, content_dict['intent'] = fallback_repeat()
@@ -234,12 +281,26 @@ def callback_com(arg):
 
         # 하루 평균 수면 시간이 몇시간입니까 에 대한 대답
         elif _msg_id == 8:
-            if info.get('sleep_average'):
-                content_dict['intent'] = "check_information_drink"
-                next_msg_id = 10
+            content_dict['intent'] = "check_information_drink"
+            next_msg_id = 10
+
+            if info.get('negative'):
                 _retry = False
-                sleep_time = float(re.findall(
-                    '\d+', info['sleep_average'])[0])
+                _social_context['sleep_status'] = 'negative'
+                request_km = json.load(
+                    open(PACKAGE_PATH + '/msgs/update.json'))
+                request_km['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                request_km['knowledge_request']['data'][0]['predicate'].append(
+                    {'p': 'sleepStatus', 'o': _social_context['sleep_status']})
+                rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
+                publisher.publish(json.dumps(
+                    request_km, ensure_ascii=False))
+
+            elif info.get('sleep_average'):
+                _retry = False
+                sleep_time = time_hour_diff(
+                    info.get('sleep_average').get('startDateTime'),
+                    info.get('sleep_average').get('endDateTime'))
                 if sleep_time >= 8:
                     _social_context['sleep_status'] = 'positive'
                 else:
@@ -252,24 +313,15 @@ def callback_com(arg):
                 rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
                 publisher.publish(json.dumps(
                     request_km, ensure_ascii=False))
+
             else:
                 next_msg_id, content_dict['intent'] = fallback_repeat()
 
         elif _msg_id == 10:
             content_dict['intent'] = "check_information_smoke"
             next_msg_id = 11
-            if info.get('drink_average'):
-                _retry = False
-                _social_context['drink_status'] = 'negative'
-                request_km = json.load(
-                    open(PACKAGE_PATH + '/msgs/update.json'))
-                request_km['knowledge_request']['data'][0]['subject'] = _social_context['name']
-                request_km['knowledge_request']['data'][0]['predicate'].append(
-                    {'p': 'drinkStatus', 'o': _social_context['drink_status']})
-                rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
-                publisher.publish(json.dumps(
-                    request_km, ensure_ascii=False))
-            elif info.get('negative'):
+
+            if info.get('negative'):
                 _retry = False
                 _social_context['drink_status'] = 'positive'
                 request_km = json.load(
@@ -280,24 +332,27 @@ def callback_com(arg):
                 rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
                 publisher.publish(json.dumps(
                     request_km, ensure_ascii=False))
+
+            elif info.get('drink_average'):
+                _retry = False
+                _social_context['drink_status'] = 'negative'
+                request_km = json.load(
+                    open(PACKAGE_PATH + '/msgs/update.json'))
+                request_km['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                request_km['knowledge_request']['data'][0]['predicate'].append(
+                    {'p': 'drinkStatus', 'o': _social_context['drink_status']})
+                rospy.loginfo(json.dumps(request_km, ensure_ascii=False))
+                publisher.publish(json.dumps(
+                    request_km, ensure_ascii=False))
+
             else:
                 next_msg_id, content_dict['intent'] = fallback_repeat()
 
         elif _msg_id == 11:
             content_dict['intent'] = "transmit_information_advice"
             next_msg_id = 12
-            if info.get('smoke_average'):
-                _retry = False
-                _social_context['smoke_status'] = 'negative'
-                response_k = json.load(
-                    open(PACKAGE_PATH + '/msgs/update.json'))
-                response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
-                response_k['knowledge_request']['data'][0]['predicate'].append(
-                    {'p': 'smokeStatus', 'o': _social_context['smoke_status']})
-                rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
-                publisher.publish(json.dumps(
-                    response_k, ensure_ascii=False))
-            elif info.get('negative'):
+
+            if info.get('negative'):
                 _retry = False
                 _social_context['smoke_status'] = 'positive'
                 response_k = json.load(
@@ -309,6 +364,19 @@ def callback_com(arg):
                 rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
                 publisher.publish(json.dumps(
                     response_k, ensure_ascii=False))
+
+            elif info.get('smoke_average'):
+                _retry = False
+                _social_context['smoke_status'] = 'negative'
+                response_k = json.load(
+                    open(PACKAGE_PATH + '/msgs/update.json'))
+                response_k['knowledge_request']['data'][0]['subject'] = _social_context['name']
+                response_k['knowledge_request']['data'][0]['predicate'].append(
+                    {'p': 'smokeStatus', 'o': _social_context['smoke_status']})
+                rospy.loginfo(json.dumps(response_k, ensure_ascii=False))
+                publisher.publish(json.dumps(
+                    response_k, ensure_ascii=False))
+
             else:
                 next_msg_id, content_dict['intent'] = fallback_repeat()
 
