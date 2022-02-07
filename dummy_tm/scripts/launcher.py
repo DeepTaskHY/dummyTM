@@ -435,6 +435,8 @@ def callback_com(arg):
                 if info.get('positive'):
                     request_km = json.load(
                         open(f'{PACKAGE_PATH}/msgs/create.json'))
+                    request_km['header']['timestamp'] = time.time()
+                    request_km['header']['id'] = _msg_id
                     req_content = dict()
                     req_content['subject'] = 'Person'
                     req_content['predicate'] = list()
@@ -572,7 +574,7 @@ def callback_vision(arg):
             msg['header']['id'] = 1
             msg['header']['timestamp'] = time.time()
             msg['knowledge_query']['data'][0]['face_id'] = int(fid)
-            msg['knowledge_query']['timestamp'] = time.time()
+            msg['knowledge_query']['data'][0]['timestamp'] = time.time()
             publisher.publish(json.dumps(msg, ensure_ascii=False))
             rospy.loginfo(json.dumps(msg, ensure_ascii=False))
             _start = True
